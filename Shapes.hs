@@ -39,7 +39,7 @@ type Color = (Int,Int,Int)
 -}
 
 data Shape = Ellipse Int Int FPoint FPoint Thickness
-           | Arc Int FPoint Float Thickness 
+           | Arc Int FPoint Float Float Thickness 
            | Line FPoint FPoint Thickness -- <-- ^ relative points 
            | Vertical Shape Shape
            | Horizontal Shape Shape
@@ -92,6 +92,11 @@ data Shape = Ellipse Int Int FPoint FPoint Thickness
    
    xs = map $ (round . (\ t -> ...)) $ [0..1000]
    ys = map $ (round . (\ t -> ...)) $ [0..1000]
+
+
+   Arc's are going to be similar: 
+   x = x1 + fx1*(x2 - x1) + r*cos (radd * t + rad1)
+   y = y1 + fy1*(y2 - y1) + r*sin (radd * t + rad1)
 -}
 
 render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
@@ -110,7 +115,7 @@ render (Horizontal s1 s2) a (x1, x2, y1, y2) = do
 render (On s1 s2) a b = do
   render s1 a b
   render s2 a b
-render (Line (fx1, fx2) (fy1, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) (zip xs ys)
+render (Line (fx1, fx2) (fy1, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
     where fxd = fx2 - fx1
           fyd = fy2 - fy1
           xd = fromIntegral $ x2 - x1
@@ -119,6 +124,29 @@ render (Line (fx1, fx2) (fy1, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray 
           x2' = fromIntegral x2
           y1' = fromIntegral y1
           y2' = fromIntegral y2
-          xs = map (round . (\t -> x1' + fx1*xd + xd*fxd*(fromIntegral t / 1000))) $ [0..1000]
-          ys = map (round . (\t -> y1' + fy1*yd + yd*fyd*(fromIntegral t / 1000))) $ [0..1000]
-
+          xs = map (round . (\s -> x1' + fx1*xd + xd*fxd*(fromIntegral s / 1000))) $ [0..1000]
+          ys = map (round . (\s -> y1' + fy1*yd + yd*fyd*(fromIntegral s / 1000))) $ [0..1000]
+          ps = zip xs ys
+          totalps = concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses
+          thicknesses = do
+            x <- [-t..t]
+            y <- [-t..t]
+            return (x,y)
+render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
+    where radd = rad2 - rad1
+          xd = fromIntegral $ x2 - x1
+          yd = fromIntegral $ x2 - x1
+          r' = fromIntegral r
+          x1' = fromIntegral x1
+          x2' = fromIntegral x2
+          y1' = fromIntegral y1
+          y2' = fromIntegral y2
+          xs = map (round . (\s -> x1' + fx*xd + r' * (cos $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
+          ys = map (round . (\s -> y1' + fy*yd + r' * (sin $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
+          ps = zip xs ys
+          totalps = concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses
+          thicknesses = do
+            x <- [-t..t]
+            y <- [-t..t]
+            return (x,y)
+render (Ellipse rmajor rminor xc yc t) a p = undefined
