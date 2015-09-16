@@ -63,4 +63,12 @@ render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid
           ysize = round $ (fromIntegral $ (abs (y2 - y1)) `div` 2) * yscale
           xmid = (x1 + x2) `div` 2
           ymid = (y1 + y2) `div` 2
-           
+render (Vertical s1 s2) a (x1,x2,y1,y2) = do
+  a' <- render s1 a (x1,x2, (y1 + y2) `div` 2, y2)
+  render s2 a' (x1, x2, y1, (y1 + y2) `div` 2)
+render (Horizontal s1 s2) a (x1, x2, y1, y2) = do
+  a' <- render s1 a (x1, (x1 + x2) `div` 2, y1, y2)
+  render s2 a' ((x1 + x2) `div` 2, x2, y1, y2)
+render (On s1 s2) a p = do
+  a' <- render s1 a p
+  render s2 a' p
