@@ -56,7 +56,45 @@ data Shape = Ellipse Int Int FPoint FPoint Thickness
    and of course it'll return the array in the ST monad
 -}
 
-render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s (STArray s (Int, Int) Color)
+{- 
+   Let's figure out how lines are going to work:
+   Now, let's assume that the FPoints tell us how far to the right and up to set things
+   
+   The range is going to be (0,0) to (1,1)
+   with (0,0) being the bottom left corner, 
+        (1,0) is the bottom right corner
+        (0,1) is the top left corner
+        (1,1) is the top right corner
+
+   if the region for a line covers points (x1, x2, y1, y2) (with x1 < x2, y1 < y2)
+   then the regional coordinates are given, as a function of rx and ry (relative coords),
+   x = x1 + (x2 - x1)*rx
+   y = y1 + (y2 - y1)*ry
+
+   we also have that the slope of the line is going to be given by 
+   (fy2 - fy1)/(fx2 - fx1)
+   so the set of regional points is going to be given by taking small steps to create an actual
+   set of integral points (and then reducing out the duplicates) so how small do we need? 
+
+   Well if we have the equations of the line be
+   x = x1 + fx1*(x2 - x1) + (x2 - x1)*(fx2 - fx1)*t
+   y = y1 + fy1*(y2 - y1) + (y2 - y1)*(fy2 - fy1)*t
+
+   now I think that's right because if we assume that fx2-fx1 = 0 then
+   the x-coordinate will be locked in as x1 + fx1*(x2 - x1)
+   if fy2 - fy1 = 0 then the y-coordinate will be locked in as y1 + fy1*(y2 - y1)
+
+   so I think I've got these equations right. Now we just need to figure out what the
+   actual fine-grainedness for t should be. It needs to go from 0 to 1 and we could be
+   adaptive in the partioning but instead let's just set it at 1000 elements
+
+   so then what we'll have as the code for all of this will be
+   
+   xs = map $ (round . (\ t -> ...)) $ [0..1000]
+   ys = map $ (round . (\ t -> ...)) $ [0..1000]
+-}
+
+render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
 render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid + xsize,
                                                               ymid - ysize, ymid + ysize)
     where xsize = round $ (fromIntegral $ (abs (x2 - x1)) `div` 2) * xscale 
@@ -64,11 +102,23 @@ render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid
           xmid = (x1 + x2) `div` 2
           ymid = (y1 + y2) `div` 2
 render (Vertical s1 s2) a (x1,x2,y1,y2) = do
-  a' <- render s1 a (x1,x2, (y1 + y2) `div` 2, y2)
-  render s2 a' (x1, x2, y1, (y1 + y2) `div` 2)
+  render s1 a (x1,x2, (y1 + y2) `div` 2, y2)
+  render s2 a (x1, x2, y1, (y1 + y2) `div` 2)
 render (Horizontal s1 s2) a (x1, x2, y1, y2) = do
-  a' <- render s1 a (x1, (x1 + x2) `div` 2, y1, y2)
-  render s2 a' ((x1 + x2) `div` 2, x2, y1, y2)
-render (On s1 s2) a p = do
-  a' <- render s1 a p
-  render s2 a' p
+  render s1 a (x1, (x1 + x2) `div` 2, y1, y2)
+  render s2 a ((x1 + x2) `div` 2, x2, y1, y2)
+render (On s1 s2) a b = do
+  render s1 a b
+  render s2 a b
+render (Line (fx1, fx2) (fy1, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) (zip xs ys)
+    where fxd = fx2 - fx1
+          fyd = fy2 - fy1
+          xd = fromIntegral $ x2 - x1
+          yd = fromIntegral $ y2 - y1
+          x1' = fromIntegral x1
+          x2' = fromIntegral x2
+          y1' = fromIntegral y1
+          y2' = fromIntegral y2
+          xs = map (round . (\t -> x1' + fx1*xd + xd*fxd*(fromIntegral t / 1000))) $ [0..1000]
+          ys = map (round . (\t -> y1' + fy1*yd + yd*fyd*(fromIntegral t / 1000))) $ [0..1000]
+
