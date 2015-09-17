@@ -39,7 +39,7 @@ type Color = (Int,Int,Int)
    Now, you might ask "why have this intermmediate DSL to begin with?" ehh basically because I want to do cute things with random instances and that sort of thing
 -}
 
-data Shape = Arc Int FPoint Float Float Thickness 
+data Shape = Arc Float FPoint Float Float Thickness 
            | Line FPoint FPoint Thickness -- <-- ^ relative points 
            | Vertical Shape Shape
            | Horizontal Shape Shape
@@ -60,7 +60,7 @@ instance Random Shape where
                             shape1 = shapeToInt s1
                             shape2 = shapeToInt s2
                         in case i of
-                             0 -> let (radius, g2) = randomR (0,100) g'
+                             0 -> let (radius, g2) = randomR (0,1) g'
                                       (x1, g3) = randomR (0,1) g2
                                       (y1, g4) = randomR (0,1) g3
                                       (rad1, g5) = randomR (0,1) g4
@@ -179,7 +179,7 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
     where radd = rad2 - rad1
           xd = fromIntegral $ x2 - x1
           yd = fromIntegral $ x2 - x1
-          r' = fromIntegral r
+          r' = r * (sqrt $ xd^2 + yd^2)
           x1' = fromIntegral x1
           x2' = fromIntegral x2
           y1' = fromIntegral y1
