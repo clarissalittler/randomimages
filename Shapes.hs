@@ -5,6 +5,7 @@ import Data.Array.MArray
 -- oh my goodness, I can't remember the last time I used mutable arrays but here we go
 -- I think that using mutable arrays will probably be better than 
 import Control.Monad.ST
+import Control.Monad.Random
 
 type Height = Int
 type Width = Int
@@ -38,14 +39,56 @@ type Color = (Int,Int,Int)
    Now, you might ask "why have this intermmediate DSL to begin with?" ehh basically because I want to do cute things with random instances and that sort of thing
 -}
 
-data Shape = Ellipse Int Int FPoint FPoint Thickness
-           | Arc Int FPoint Float Float Thickness 
+data Shape = Arc Int FPoint Float Float Thickness 
            | Line FPoint FPoint Thickness -- <-- ^ relative points 
            | Vertical Shape Shape
            | Horizontal Shape Shape
            | On Shape Shape -- layer shapes onto one region
-           | Region Float Float Shape -- scaling another shape to fit a region and giving it a background color
-           deriving (Eq,Show)
+           | Region Float Float Shape -- scaling another shape to fit a region
+           deriving (Eq,Show, Ord)
+
+shapeToInt :: Shape -> Int
+shapeToInt (Arc _ _ _ _ _) = 0
+shapeToInt (Line _ _ _) = 1
+shapeToInt (Vertical _ _) = 2
+shapeToInt (Horizontal _ _) = 3
+shapeToInt (On _ _) = 4
+shapeToInt (Region _ _ _) = 5
+
+instance Random Shape where
+    randomR (s1,s2) g = let (i,g') = randomR (shape1, shape2) g
+                            shape1 = shapeToInt s1
+                            shape2 = shapeToInt s2
+                        in case i of
+                             0 -> let (radius, g2) = randomR (0,100) g'
+                                      (x1, g3) = randomR (0,1) g2
+                                      (y1, g4) = randomR (0,1) g3
+                                      (rad1, g5) = randomR (0,1) g4
+                                      (rad2, g6) = randomR (0,1) g5
+                                      (t, g7) = randomR (1,5) g6
+                                  in (Arc radius (x1,y1) rad1 rad2 t,g7)
+                             1 -> let (x1,g2) = randomR (0,1) g'
+                                      (y1,g3) = randomR (0,1) g2
+                                      (x2,g4) = randomR (0,1) g3
+                                      (y2,g5) = randomR (0,1) g4
+                                      (t,g6) = randomR (1,5) g5
+                                  in (Line (x1,y1) (x2,y2) t, g6)
+                             2 -> let (sh1,g2) = randomR (s1,s2) g'
+                                      (sh2,g3) = randomR (s1,s2) g2
+                                  in (Vertical sh1 sh2, g3)
+                             3 -> let (sh1, g2) = randomR (s1,s2) g'
+                                      (sh2, g3) = randomR (s1,s2) g2
+                                  in (Horizontal sh1 sh2, g3)
+                             4 -> let (sh1, g2) = randomR (s1,s2) g'
+                                      (sh2, g3) = randomR (s1,s2) g2
+                                  in (On sh1 sh2, g3)
+                             5 -> let (x, g2) = randomR (0,1) g'
+                                      (y, g3) = randomR (0,1) g2
+                                      (sh, g4) = randomR (s1,s2) g3
+                                  in (Region x y sh, g4)
+                                      
+    random g = randomR (Arc undefined undefined undefined undefined undefined,
+                        Region undefined undefined undefined) g
 
 {- 
    Rendering is going to take 
@@ -115,7 +158,7 @@ render (Horizontal s1 s2) a (x1, x2, y1, y2) = do
 render (On s1 s2) a b = do
   render s1 a b
   render s2 a b
-render (Line (fx1, fx2) (fy1, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
+render (Line (fx1, fy1) (fx2, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
     where fxd = fx2 - fx1
           fyd = fy2 - fy1
           xd = fromIntegral $ x2 - x1
@@ -149,4 +192,4 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
             x <- [-t..t]
             y <- [-t..t]
             return (x,y)
-render (Ellipse rmajor rminor xc yc t) a p = undefined
+
