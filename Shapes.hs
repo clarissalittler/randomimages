@@ -2,6 +2,7 @@ module Shapes where
 
 import Data.Array.ST
 import Data.Array.MArray 
+import Data.Array
 -- oh my goodness, I can't remember the last time I used mutable arrays but here we go
 -- I think that using mutable arrays will probably be better than 
 import Control.Monad.ST
@@ -193,3 +194,13 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
             y <- [-t..t]
             return (x,y)
 
+runRender :: Shape -> Int -> Int -> Array (Int,Int) Color
+runRender s xsize ysize = runSTArray (runRender' s xsize ysize)
+
+runRender' :: Shape -> Int -> Int -> ST s (STArray s (Int,Int) Color)
+runRender' s xsize ysize = do
+  a <- newArray ((-xsize `div` 2,-ysize `div` 2),
+                 (xsize `div` 2, ysize `div` 2)) (1,1,1)
+  render s a (-xsize `div` 2, xsize `div` 2, -ysize `div` 2, ysize `div` 2)
+  return a
+  
