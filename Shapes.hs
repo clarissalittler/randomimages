@@ -91,6 +91,21 @@ instance Random Shape where
     random g = randomR (Arc undefined undefined undefined undefined undefined,
                         Region undefined undefined undefined) g
 
+circle :: RandomGen g => Thickness -> Float -> Float -> Rand g Shape
+circle t minR maxR = do
+  x <- getRandomR (0,1)
+  y <- getRandomR (0,1)
+  r <- getRandomR (minR, maxR)
+  return $ Arc r (x,y) (0 :: Float) (2*pi) t
+
+
+square :: Float -> Float -> Float -> Int -> Shape
+square x y side t = side1 `On` (side2 `On` (side3 `On` side4))
+    where side1 = Line (x,y) (x + side, y) t 
+          side2 = Line (x + side, y) (x + side, y + side) t
+          side3 = Line (x, y) (x, y + side) t
+          side4 = Line (x, y + side) (x + side, y + side) t
+
 {- 
    Rendering is going to take 
    1. a shape
