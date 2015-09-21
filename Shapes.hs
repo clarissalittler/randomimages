@@ -1,5 +1,7 @@
 module Shapes where
 
+import System.IO.Unsafe
+
 import Data.Array.ST
 import Data.Array.MArray 
 import Data.Array
@@ -164,6 +166,9 @@ triangle p1 p2 p3 t = side1 `On` (side2 `On` side3)
    y = y1 + fy1*(y2 - y1) + r*sin (radd * t + rad1)
 -}
 
+safefilter :: [(Int,Int)] -> Int -> Int -> Int -> Int -> [(Int,Int)]
+safefilter ps x1 y1 x2 y2 = filter (\(x,y) -> x >= x1 && x <= x2 && y >= y1 && y <= y2) ps
+
 render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
 render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid + xsize,
                                                               ymid - ysize, ymid + ysize)
@@ -192,7 +197,7 @@ render (Line (fx1, fy1) (fx2, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray 
           xs = map (round . (\s -> x1' + fx1*xd + xd*fxd*(fromIntegral s / 1000))) $ [0..1000]
           ys = map (round . (\s -> y1' + fy1*yd + yd*fyd*(fromIntegral s / 1000))) $ [0..1000]
           ps = zip xs ys
-          totalps = concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses
+          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
           thicknesses = do
             x <- [-t..t]
             y <- [-t..t]
@@ -209,7 +214,7 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
           xs = map (round . (\s -> x1' + fx*xd + r' * (cos $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
           ys = map (round . (\s -> y1' + fy*yd + r' * (sin $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
           ps = zip xs ys
-          totalps = concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses
+          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y2 x2 y2
           thicknesses = do
             x <- [-t..t]
             y <- [-t..t]
@@ -225,3 +230,15 @@ runRender' s xsize ysize = do
   render s a (-xsize `div` 2, xsize `div` 2, -ysize `div` 2, ysize `div` 2)
   return a
   
+printArray :: (Show a) => Array (Int,Int) a -> String
+printArray arr = unlines $ [concat $ row i | i <- [negy..y]]
+    where ((negx,negy),(x,y)) = bounds arr
+          row i = [ show $ arr ! (rx,i) | rx <- [negx..x] ]
+          
+renderTest1 :: IO ()
+renderTest1 = do
+  let l = Line (0,0) (1,1) 1
+      arr = runRender l 100 100
+      aux (0,0,0) = '0'
+      aux (1,1,1) = '1'
+  putStrLn $ printArray $ fmap aux arr
