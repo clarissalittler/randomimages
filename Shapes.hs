@@ -106,6 +106,12 @@ square x y side t = side1 `On` (side2 `On` (side3 `On` side4))
           side3 = Line (x, y) (x, y + side) t
           side4 = Line (x, y + side) (x + side, y + side) t
 
+triangle :: FPoint -> FPoint -> FPoint -> Thickness -> Shape
+triangle p1 p2 p3 t = side1 `On` (side2 `On` side3)
+    where side1 = Line p1 p2 t
+          side2 = Line p1 p3 t
+          side3 = Line p2 p3 t
+
 {- 
    Rendering is going to take 
    1. a shape
