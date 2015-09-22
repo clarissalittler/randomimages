@@ -93,13 +93,15 @@ instance Random Shape where
     random g = randomR (Arc undefined undefined undefined undefined undefined,
                         Region undefined undefined undefined) g
 
-circle :: RandomGen g => Thickness -> Float -> Float -> Rand g Shape
-circle t minR maxR = do
+randcircle :: RandomGen g => Thickness -> Float -> Float -> Rand g Shape
+randcircle t minR maxR = do
   x <- getRandomR (0,1)
   y <- getRandomR (0,1)
   r <- getRandomR (minR, maxR)
   return $ Arc r (x,y) (0 :: Float) (2*pi) t
 
+circle :: Float -> Float -> Float -> Int -> Shape
+circle x y r t = Arc r (x,y) 0 (2*pi) t
 
 square :: Float -> Float -> Float -> Int -> Shape
 square x y side t = side1 `On` (side2 `On` (side3 `On` side4))
@@ -199,8 +201,8 @@ render (Line (fx1, fy1) (fx2, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray 
           ps = zip xs ys
           totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
           thicknesses = do
-            x <- [-t..t]
-            y <- [-t..t]
+            x <- [-(t-1)..(t-1)]
+            y <- [-(t-1)..(t-1)]
             return (x,y)
 render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
     where radd = rad2 - rad1
@@ -216,8 +218,8 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
           ps = zip xs ys
           totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y2 x2 y2
           thicknesses = do
-            x <- [-t..t]
-            y <- [-t..t]
+            x <- [-(t-1)..(t-1)]
+            y <- [-(t-1)..(t-1)]
             return (x,y)
 
 runRender :: Shape -> Int -> Int -> Array (Int,Int) Color
@@ -234,11 +236,48 @@ printArray :: (Show a) => Array (Int,Int) a -> String
 printArray arr = unlines $ [concat $ row i | i <- [negy..y]]
     where ((negx,negy),(x,y)) = bounds arr
           row i = [ show $ arr ! (rx,i) | rx <- [negx..x] ]
+
+outputArray :: Array (Int,Int) Color -> IO ()
+outputArray arr = putStrLn $ printArray $ fmap aux arr
+    where aux (0,0,0) = '0'
+          aux (1,1,1) = '1'
           
 renderTest1 :: IO ()
 renderTest1 = do
   let l = Line (0,0) (1,1) 1
-      arr = runRender l 100 100
-      aux (0,0,0) = '0'
-      aux (1,1,1) = '1'
-  putStrLn $ printArray $ fmap aux arr
+      arr = runRender l 10 10
+  outputArray arr
+
+renderTest2 :: IO ()
+renderTest2 = do
+  let l1 = Line (0,0) (1,1) 1
+      l2 = Line (0,1) (1,0) 1
+      arr = runRender (l1 `On` l2) 10 10
+  outputArray arr
+
+renderTest3 :: IO ()
+renderTest3 = do
+  let l = Line (0,0) (1,1) 1
+      arr = runRender (l `Vertical` l) 10 10
+  outputArray arr
+
+renderTest4 = do
+  let l = Line (0,0) (1,1) 1
+      arr = runRender (l `Horizontal` l) 10 10
+  outputArray arr
+
+renderTest5 = do
+  let t = triangle (0,0) (0.5,1) (1,0) 1
+      arr = runRender t 10 10
+  outputArray arr
+
+renderTest6 = do
+  let s = square 0 0 0.5 1
+      arr = runRender s 10 10
+  outputArray arr
+
+-- okay this doesn't work, and I don't know why yet
+renderTest7 = do
+  let c = circle 0 0 0.5 1
+      arr = runRender c 20 20
+  outputArray arr
