@@ -15,3 +15,10 @@ convert a = generateImage aux width height
           convertColor (x,y,z) = PixelRGB16 0 0 0  -- yes, this is silly but it works until I decide if I want real color
           transx x = x - width `div` 2
           transy y = (height `div` 2) -y
+
+imageTest :: IO ()
+imageTest = do
+  let l = Line (0,0) (1,1) 5
+      arr = runRender l 500 500
+      img = ImageRGB16 $ convert arr
+  saveBmpImage "test1.bmp" img
