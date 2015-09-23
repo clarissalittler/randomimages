@@ -9,6 +9,8 @@ import Data.Array
 -- I think that using mutable arrays will probably be better than 
 import Control.Monad.ST
 import Control.Monad.Random
+import Data.List
+
 
 type Height = Int
 type Width = Int
@@ -17,6 +19,8 @@ type Point = (Int,Int)
 type Thickness = Int
 
 type Color = (Int,Int,Int)
+
+debugPrint a = unsafePerformIO $ print a >> return a
 
 {- 
    Here's the preliminary DSL for making the kinds of shapes I want. 
@@ -198,7 +202,7 @@ render (Line (fx1, fy1) (fx2, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray 
           y2' = fromIntegral y2
           xs = map (round . (\s -> x1' + fx1*xd + xd*fxd*(fromIntegral s / 1000))) $ [0..1000]
           ys = map (round . (\s -> y1' + fy1*yd + yd*fyd*(fromIntegral s / 1000))) $ [0..1000]
-          ps = zip xs ys
+          ps = nub $ zip xs ys
           totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
           thicknesses = do
             x <- [-(t-1)..(t-1)]
@@ -215,8 +219,8 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
           y2' = fromIntegral y2
           xs = map (round . (\s -> x1' + fx*xd + r' * (cos $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
           ys = map (round . (\s -> y1' + fy*yd + r' * (sin $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
-          ps = zip xs ys
-          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y2 x2 y2
+          ps = nub $ zip xs ys
+          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
           thicknesses = do
             x <- [-(t-1)..(t-1)]
             y <- [-(t-1)..(t-1)]
@@ -277,7 +281,7 @@ renderTest6 = do
   outputArray arr
 
 -- okay this doesn't work, and I don't know why yet
-renderTest7 = do
-  let c = circle 0 0 0.5 1
+renderTest7 r = do
+  let c = circle 0.5 0.5 r 1
       arr = runRender c 20 20
   outputArray arr
