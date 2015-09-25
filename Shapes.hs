@@ -114,11 +114,37 @@ square x y side t = side1 `On` (side2 `On` (side3 `On` side4))
           side3 = Line (x, y) (x, y + side) t
           side4 = Line (x, y + side) (x + side, y + side) t
 
+randSquare :: RandomGen g => Int -> Rand g Shape
+randSquare t = do
+  x <- getRandomR (0,1)
+  y <- getRandomR (0,1)
+  s <- getRandomR (0,1)
+  return $ square x y s t
+
 triangle :: FPoint -> FPoint -> FPoint -> Thickness -> Shape
 triangle p1 p2 p3 t = side1 `On` (side2 `On` side3)
     where side1 = Line p1 p2 t
           side2 = Line p1 p3 t
           side3 = Line p2 p3 t
+
+randPoint :: RandomGen g => Rand g FPoint
+randPoint = do
+  x <- getRandomR (0,1)
+  y <- getRandomR (0,1)
+  return (x,y)
+
+randTriangle :: RandomGen g => Thickness -> Rand g Shape
+randTriangle t = do
+  p1 <- randPoint
+  p2 <- randPoint
+  p3 <- randPoint
+  return $ triangle p1 p2 p3 t
+
+randLine :: RandomGen g => Thickness -> Rand g Shape
+randLine t = do
+  p1 <- randPoint
+  p2 <- randPoint
+  return $ Line p1 p2 t
 
 {- 
    Rendering is going to take 
