@@ -104,6 +104,15 @@ randcircle t minR maxR = do
   r <- getRandomR (minR, maxR)
   return $ Arc r (x,y) (0 :: Float) (2*pi) t
 
+randarc :: RandomGen g => Thickness -> Float -> Float -> Rand g Shape
+randarc t minR maxR = do
+  x <- getRandomR (0,1)
+  y <- getRandomR (0,1)
+  r <- getRandomR (minR, maxR)
+  th1 <- getRandomR (0,2*pi)
+  th2 <- getRandomR (th1,2*pi)
+  return $ Arc r (x,y) th1 th2 t
+
 circle :: Float -> Float -> Float -> Int -> Shape
 circle x y r t = Arc r (x,y) 0 (2*pi) t
 
@@ -146,6 +155,13 @@ randLine t = do
   p2 <- randPoint
   return $ Line p1 p2 t
 
+randConnective :: RandomGen g => Rand g (Shape -> Shape -> Shape)
+randConnective = do
+  c <- getRandomR (1 :: Int,3)
+  case c of
+    1 -> return On
+    2 -> return Vertical
+    3 -> return Horizontal
 {- 
    Rendering is going to take 
    1. a shape
