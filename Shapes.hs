@@ -54,6 +54,25 @@ data Shape = Arc Float FPoint Float Float Thickness
            | Region Float Float Shape -- scaling another shape to fit a region
            deriving (Eq,Show, Ord)
 
+mirrorH :: Shape -> Shape
+mirrorH (On s1 s2) = On (mirrorH s1) (mirrorH s2)
+mirrorH (Vertical s1 s2) = Vertical (mirrorH s1) (mirrorH s2)
+mirrorH (Horizontal s1 s2) = Vertical (mirrorH s2) (mirrorH s1)
+mirrorH (Region x y s) = Region x y (mirrorH s)
+mirrorH (Line (fx1,fy1) (fx2, fy2) t) = Line (1-fx2,fy2) (1-fx1, fy1) t
+mirrorH (Arc r (x,y) th1 th2 t) = Arc r (1-x,y) (pi - th2) (pi - th1) t
+
+mirroredPairH :: Shape -> Shape
+mirroredPairH s = s `Horizontal` (mirrorH s)
+
+mirrorV :: Shape -> Shape
+mirrorV (On s1 s2) = On (mirrorV s1) (mirrorV s2)
+mirrorV (Vertical s1 s2) = Vertical (mirrorV s2) (mirrorV s1)
+mirrorV (Horizontal s1 s2) = Horizontal (mirrorV s1) (mirrorV s2)
+mirrorV (Region x y s) = Region x y (mirrorV s)
+mirrorV (Line (fx1,fy1) (fx2,fy2) t) = Line (fx1, 1-fy2) (fx2, 1-fy1) t
+mirrorV (Arc r (x,y) th1 th2 t) = Arc r (x,1-y) undefined undefined t
+
 shapeToInt :: Shape -> Int
 shapeToInt (Arc _ _ _ _ _) = 0
 shapeToInt (Line _ _ _) = 1
