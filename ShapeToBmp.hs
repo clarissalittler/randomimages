@@ -16,6 +16,9 @@ convert a = generateImage aux width height
           transx x = x - width `div` 2
           transy y = (height `div` 2) -y
 
+shapeToImage :: Shape -> Int -> Int -> Image PixelRGB16
+shapeToImage s x y = convert $ runRender s x y
+
 imageTest :: IO ()
 imageTest = do
   let l = Line (0,0) (1,1) 5
