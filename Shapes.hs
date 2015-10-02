@@ -16,7 +16,7 @@ type Height = Int
 type Width = Int
 type FPoint = (Float,Float)
 type Point = (Int,Int)
-type Thickness = Int
+type Thickness = Float
 
 type Color = (Int,Int,Int)
 
@@ -91,13 +91,13 @@ instance Random Shape where
                                       (y1, g4) = randomR (0,1) g3
                                       (rad1, g5) = randomR (0,1) g4
                                       (rad2, g6) = randomR (0,1) g5
-                                      (t, g7) = randomR (1,5) g6
+                                      (t, g7) = randomR (0.01,0.1) g6
                                   in (Arc radius (x1,y1) rad1 rad2 t,g7)
                              1 -> let (x1,g2) = randomR (0,1) g'
                                       (y1,g3) = randomR (0,1) g2
                                       (x2,g4) = randomR (0,1) g3
                                       (y2,g5) = randomR (0,1) g4
-                                      (t,g6) = randomR (1,5) g5
+                                      (t,g6) = randomR (0.01,0.1) g5
                                   in (Line (x1,y1) (x2,y2) t, g6)
                              2 -> let (sh1,g2) = randomR (s1,s2) g'
                                       (sh2,g3) = randomR (s1,s2) g2
@@ -132,17 +132,17 @@ randarc t minR maxR = do
   th2 <- getRandomR (th1,2*pi)
   return $ Arc r (x,y) th1 th2 t
 
-circle :: Float -> Float -> Float -> Int -> Shape
+circle :: Float -> Float -> Float -> Float -> Shape
 circle x y r t = Arc r (x,y) 0 (2*pi) t
 
-square :: Float -> Float -> Float -> Int -> Shape
+square :: Float -> Float -> Float -> Float -> Shape
 square x y side t = side1 `On` (side2 `On` (side3 `On` side4))
     where side1 = Line (x,y) (x + side, y) t 
           side2 = Line (x + side, y) (x + side, y + side) t
           side3 = Line (x, y) (x, y + side) t
           side4 = Line (x, y + side) (x + side, y + side) t
 
-randSquare :: RandomGen g => Int -> Rand g Shape
+randSquare :: RandomGen g => Float -> Rand g Shape
 randSquare t = do
   x <- getRandomR (0,1)
   y <- getRandomR (0,1)
@@ -233,9 +233,52 @@ randConnective = do
    y = y1 + fy1*(y2 - y1) + r*sin (radd * t + rad1)
 -}
 
+timesteps :: [Float]
+timesteps = map (\t -> fromIntegral t / 1000) [0..1000]
+
+tSteps :: Int
+tSteps = 10
+
 safefilter :: [(Int,Int)] -> Int -> Int -> Int -> Int -> [(Int,Int)]
 safefilter ps x1 y1 x2 y2 = filter (\(x,y) -> x >= x1 && x <= x2 && y >= y1 && y <= y2) ps
 
+renderFloat :: Shape -> [(Float,Float)]
+renderFloat (Vertical s1 s2) = (map (\(x,y) -> (x,0.5 * y)) $ renderFloat s1)
+                               ++ (map (\(x,y) -> (x,0.5*y + 0.5)) $ renderFloat s2)
+renderFloat (Horizontal s1 s2) = (map (\(x,y) -> (0.5 * x,y)) $ renderFloat s1)
+                               ++ (map (\(x,y) -> (0.5 * x + 0.5,y)) $ renderFloat s2)
+renderFloat (On s1 s2) = renderFloat s1 ++ renderFloat s2
+renderFloat (Region xs ys s) = map (\(x,y) -> (x*xs,y*ys)) $ renderFloat s 
+renderFloat (Line (x1,y1) (x2,y2) t) = thickness t $ map (\s -> (x1 + xd*s, y1 + yd*s)) timesteps
+    where xd = x2 - x1
+          yd = y2 - y1
+renderFloat (Arc r (x,y) th1 th2 t) = thickness t $ map (\s -> (x + r * (cos $ thf s),
+                                                                y + r * (sin $ thf s))) timesteps
+    where thd = th2 - th1
+          thf s = (th2 - th1)*s + th1
+
+-- this is a bit of a hack but I'm not sure how to do it better
+thickness :: Float -> [(Float,Float)] -> [(Float,Float)]
+thickness t ps = concat ps'
+    where ps' = do
+            xt <- [-tSteps..tSteps]
+            yt <- [-tSteps..tSteps]
+            return $ map (\(x,y) -> (x + (fromIntegral xt / (fromIntegral tSteps)) * t,
+                                     y + (fromIntegral yt / (fromIntegral tSteps)) * t)) ps
+
+floatToArray :: [(Float,Float)] -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
+floatToArray ps a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) $ nub ps''
+    where ps'' = safefilter ps' x1 y1 x2 y2
+          dx = fromIntegral $ x2 - x1
+          dy = fromIntegral $ y2 - y1
+          x1' = fromIntegral x1
+          y1' = fromIntegral y1
+          ps' = map (\(fx,fy) -> (round $ x1' + fx*dx, round $ y1' + fy*dy)) ps
+
+render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
+render s a ds = floatToArray (renderFloat s) a ds
+
+{-
 render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
 render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid + xsize,
                                                               ymid - ysize, ymid + ysize)
@@ -286,6 +329,7 @@ render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a 
             x <- [-(t-1)..(t-1)]
             y <- [-(t-1)..(t-1)]
             return (x,y)
+-}
 
 runRender :: Shape -> Int -> Int -> Array (Int,Int) Color
 runRender s xsize ysize = runSTArray (runRender' s xsize ysize)
@@ -309,10 +353,11 @@ outputArray arr = putStrLn $ printArray $ fmap aux arr
           
 renderTest1 :: IO ()
 renderTest1 = do
-  let l = Line (0,0) (1,1) 1
+  let l = Line (0,0) (1,1) 0.1
       arr = runRender l 10 10
   outputArray arr
 
+{-
 renderTest2 :: IO ()
 renderTest2 = do
   let l1 = Line (0,0) (1,1) 1
@@ -346,3 +391,4 @@ renderTest7 r = do
   let c = circle 0.5 0.5 r 1
       arr = runRender c 20 20
   outputArray arr
+-}
