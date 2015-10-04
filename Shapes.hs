@@ -278,59 +278,6 @@ floatToArray ps a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) $ nub ps'
 render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
 render s a ds = floatToArray (renderFloat s) a ds
 
-{-
-render :: Shape -> STArray s (Int,Int) Color -> (Int,Int,Int,Int) -> ST s ()
-render (Region xscale yscale s) a (x1,x2,y1,y2) = render s a (xmid - xsize, xmid + xsize,
-                                                              ymid - ysize, ymid + ysize)
-    where xsize = round $ (fromIntegral $ (abs (x2 - x1)) `div` 2) * xscale 
-          ysize = round $ (fromIntegral $ (abs (y2 - y1)) `div` 2) * yscale
-          xmid = (x1 + x2) `div` 2
-          ymid = (y1 + y2) `div` 2
-render (Vertical s1 s2) a (x1,x2,y1,y2) = do
-  render s1 a (x1,x2, (y1 + y2) `div` 2, y2)
-  render s2 a (x1, x2, y1, (y1 + y2) `div` 2)
-render (Horizontal s1 s2) a (x1, x2, y1, y2) = do
-  render s1 a (x1, (x1 + x2) `div` 2, y1, y2)
-  render s2 a ((x1 + x2) `div` 2, x2, y1, y2)
-render (On s1 s2) a b = do
-  render s1 a b
-  render s2 a b
-render (Line (fx1, fy1) (fx2, fy2) t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
-    where fxd = fx2 - fx1
-          fyd = fy2 - fy1
-          xd = fromIntegral $ x2 - x1
-          yd = fromIntegral $ y2 - y1
-          x1' = fromIntegral x1
-          x2' = fromIntegral x2
-          y1' = fromIntegral y1
-          y2' = fromIntegral y2
-          xs = map (round . (\s -> x1' + fx1*xd + xd*fxd*(fromIntegral s / 1000))) $ [0..1000]
-          ys = map (round . (\s -> y1' + fy1*yd + yd*fyd*(fromIntegral s / 1000))) $ [0..1000]
-          ps = nub $ zip xs ys
-          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
-          thicknesses = do
-            x <- [-(t-1)..(t-1)]
-            y <- [-(t-1)..(t-1)]
-            return (x,y)
-render (Arc r (fx, fy) rad1 rad2 t) a (x1,x2,y1,y2) = mapM_ (\p -> writeArray a p (0,0,0)) totalps
-    where radd = rad2 - rad1
-          xd = fromIntegral $ x2 - x1
-          yd = fromIntegral $ x2 - x1
-          r' = r * (sqrt $ xd^2 + yd^2)
-          x1' = fromIntegral x1
-          x2' = fromIntegral x2
-          y1' = fromIntegral y1
-          y2' = fromIntegral y2
-          xs = map (round . (\s -> x1' + fx*xd + r' * (cos $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
-          ys = map (round . (\s -> y1' + fy*yd + r' * (sin $ radd*(fromIntegral s / 1000) + rad1))) $ [0..1000]
-          ps = nub $ zip xs ys
-          totalps = safefilter (concat $ map (\(th1,th2) -> map (\(x,y) -> (x+th1, y+th2)) ps) thicknesses) x1 y1 x2 y2
-          thicknesses = do
-            x <- [-(t-1)..(t-1)]
-            y <- [-(t-1)..(t-1)]
-            return (x,y)
--}
-
 runRender :: Shape -> Int -> Int -> Array (Int,Int) Color
 runRender s xsize ysize = runSTArray (runRender' s xsize ysize)
 
