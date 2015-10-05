@@ -52,6 +52,7 @@ data Shape = Arc Float FPoint Float Float Thickness
            | Horizontal Shape Shape
            | On Shape Shape -- layer shapes onto one region
            | Region Float Float Shape -- scaling another shape to fit a region
+           | Empty
            deriving (Eq,Show, Ord)
 
 mirrorH :: Shape -> Shape
@@ -61,6 +62,7 @@ mirrorH (Horizontal s1 s2) = Vertical (mirrorH s2) (mirrorH s1)
 mirrorH (Region x y s) = Region x y (mirrorH s)
 mirrorH (Line (fx1,fy1) (fx2, fy2) t) = Line (1-fx2,fy2) (1-fx1, fy1) t
 mirrorH (Arc r (x,y) th1 th2 t) = Arc r (1-x,y) (pi - th2) (pi - th1) t
+mirrorH Empty = Empty
 
 mirroredPairH :: Shape -> Shape
 mirroredPairH s = s `Horizontal` (mirrorH s)
@@ -72,6 +74,7 @@ mirrorV (Horizontal s1 s2) = Horizontal (mirrorV s1) (mirrorV s2)
 mirrorV (Region x y s) = Region x y (mirrorV s)
 mirrorV (Line (fx1,fy1) (fx2,fy2) t) = Line (fx1, 1-fy2) (fx2, 1-fy1) t
 mirrorV (Arc r (x,y) th1 th2 t) = Arc r (x,1-y) (2*pi - th2) (2*pi - th1) t
+mirrorV Empty = Empty
 
 mirroredPairV :: Shape -> Shape
 mirroredPairV s = s `Vertical` (mirrorV s)
@@ -83,6 +86,7 @@ shapeToInt (Vertical _ _) = 2
 shapeToInt (Horizontal _ _) = 3
 shapeToInt (On _ _) = 4
 shapeToInt (Region _ _ _) = 5
+shapeToInt Empty = 6
 
 instance Random Shape where
     randomR (s1,s2) g = let (i,g') = randomR (shape1, shape2) g
@@ -115,6 +119,7 @@ instance Random Shape where
                                       (y, g3) = randomR (0,1) g2
                                       (sh, g4) = randomR (s1,s2) g3
                                   in (Region x y sh, g4)
+                             6 -> (Empty, g')
                                       
     random g = randomR (Arc undefined undefined undefined undefined undefined,
                         Region undefined undefined undefined) g
@@ -250,7 +255,7 @@ renderFloat (Arc r (x,y) th1 th2 t) = thickness t $ map (\s -> (x + r * (cos $ t
                                                                 y + r * (sin $ thf s))) timesteps
     where thd = th2 - th1
           thf s = (th2 - th1)*s + th1
-
+renderFloat Empty = []
 -- this is a bit of a hack but I'm not sure how to do it better
 thickness :: Float -> [(Float,Float)] -> [(Float,Float)]
 thickness t ps = concat ps'
