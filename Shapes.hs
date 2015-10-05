@@ -304,38 +304,37 @@ renderTest1 = do
       arr = runRender l 10 10
   outputArray arr
 
-{-
 renderTest2 :: IO ()
 renderTest2 = do
-  let l1 = Line (0,0) (1,1) 1
-      l2 = Line (0,1) (1,0) 1
+  let l1 = Line (0,0) (1,1) 0.1
+      l2 = Line (0,1) (1,0) 0.1
       arr = runRender (l1 `On` l2) 10 10
   outputArray arr
 
+
 renderTest3 :: IO ()
 renderTest3 = do
-  let l = Line (0,0) (1,1) 1
+  let l = Line (0,0) (1,1) 0.1
       arr = runRender (l `Vertical` l) 10 10
   outputArray arr
 
 renderTest4 = do
-  let l = Line (0,0) (1,1) 1
+  let l = Line (0,0) (1,1) 0.1
       arr = runRender (l `Horizontal` l) 10 10
   outputArray arr
 
 renderTest5 = do
-  let t = triangle (0,0) (0.5,1) (1,0) 1
+  let t = triangle (0,0) (0.5,1) (1,0) 0.1
       arr = runRender t 10 10
   outputArray arr
 
 renderTest6 = do
-  let s = square 0 0 0.5 1
+  let s = square 0 0 0.5 0.1
       arr = runRender s 10 10
   outputArray arr
 
--- okay this doesn't work, and I don't know why yet
 renderTest7 r = do
-  let c = circle 0.5 0.5 r 1
+  let c = circle 0.5 0.5 r 0.1
       arr = runRender c 20 20
   outputArray arr
--}
+
