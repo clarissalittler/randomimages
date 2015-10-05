@@ -71,7 +71,10 @@ mirrorV (Vertical s1 s2) = Vertical (mirrorV s2) (mirrorV s1)
 mirrorV (Horizontal s1 s2) = Horizontal (mirrorV s1) (mirrorV s2)
 mirrorV (Region x y s) = Region x y (mirrorV s)
 mirrorV (Line (fx1,fy1) (fx2,fy2) t) = Line (fx1, 1-fy2) (fx2, 1-fy1) t
-mirrorV (Arc r (x,y) th1 th2 t) = Arc r (x,1-y) undefined undefined t
+mirrorV (Arc r (x,y) th1 th2 t) = Arc r (x,1-y) (2*pi - th2) (2*pi - th1) t
+
+mirroredPairV :: Shape -> Shape
+mirroredPairV s = s `Vertical` (mirrorV s)
 
 shapeToInt :: Shape -> Int
 shapeToInt (Arc _ _ _ _ _) = 0
@@ -181,15 +184,6 @@ randConnective = do
     1 -> return On
     2 -> return Vertical
     3 -> return Horizontal
-{- 
-   Rendering is going to take 
-   1. a shape
-   2. the actual marray as well as
-   3. the current bounds of the region (initially the same as the whole array)
-
-   and of course it'll return the array in the ST monad
--}
-
 {- 
    Let's figure out how lines are going to work:
    Now, let's assume that the FPoints tell us how far to the right and up to set things
