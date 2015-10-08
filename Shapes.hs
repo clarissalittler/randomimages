@@ -64,8 +64,8 @@ mirrorH (Line (fx1,fy1) (fx2, fy2) t) = Line (1-fx2,fy2) (1-fx1, fy1) t
 mirrorH (Arc r (x,y) th1 th2 t) = Arc r (1-x,y) (pi - th2) (pi - th1) t
 mirrorH Empty = Empty
 
-mirroredPairH :: Shape -> Shape
-mirroredPairH s = s `Horizontal` (mirrorH s)
+mirrorPairH :: Shape -> Shape
+mirrorPairH s = s `Horizontal` (mirrorH s)
 
 mirrorV :: Shape -> Shape
 mirrorV (On s1 s2) = On (mirrorV s1) (mirrorV s2)
@@ -76,8 +76,8 @@ mirrorV (Line (fx1,fy1) (fx2,fy2) t) = Line (fx1, 1-fy2) (fx2, 1-fy1) t
 mirrorV (Arc r (x,y) th1 th2 t) = Arc r (x,1-y) (2*pi - th2) (2*pi - th1) t
 mirrorV Empty = Empty
 
-mirroredPairV :: Shape -> Shape
-mirroredPairV s = s `Vertical` (mirrorV s)
+mirrorPairV :: Shape -> Shape
+mirrorPairV s = s `Vertical` (mirrorV s)
 
 shapeToInt :: Shape -> Int
 shapeToInt (Arc _ _ _ _ _) = 0
